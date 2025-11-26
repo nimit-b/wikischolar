@@ -329,12 +329,16 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                                                     className="w-full h-auto rounded-lg"
                                                     onError={(e) => {
                                                         const target = e.target as HTMLImageElement;
-                                                        target.style.display = 'none';
-                                                        const obj = document.createElement('object');
-                                                        obj.data = sanitizeDataUri(extras[section.id].content);
-                                                        obj.type = "image/svg+xml";
-                                                        obj.className = "w-full h-auto rounded-lg";
-                                                        target.parentNode?.appendChild(obj);
+                                                        // Only fallback to object if it's likely an SVG data URI that failed
+                                                        if (extras[section.id].content.startsWith('data:image/svg')) {
+                                                            target.style.display = 'none';
+                                                            const obj = document.createElement('object');
+                                                            obj.data = sanitizeDataUri(extras[section.id].content);
+                                                            obj.type = "image/svg+xml";
+                                                            obj.className = "w-full h-auto rounded-lg";
+                                                            target.parentNode?.appendChild(obj);
+                                                        }
+                                                        // For HTTP URLs, we let the broken image show or handle differently, but don't try to parse as XML
                                                     }}
                                                 />
                                             ) : (
