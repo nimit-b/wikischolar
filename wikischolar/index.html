@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WikiScholar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+            },
+            colors: {
+              brand: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                200: '#bfdbfe',
+                300: '#93c5fd',
+                400: '#60a5fa',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+                800: '#1e40af',
+                900: '#1e3a8a',
+              }
+            },
+            animation: {
+                blob: "blob 7s infinite",
+            },
+            keyframes: {
+                blob: {
+                    "0%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                    "33%": {
+                        transform: "translate(30px, -50px) scale(1.1)",
+                    },
+                    "66%": {
+                        transform: "translate(-20px, 20px) scale(0.9)",
+                    },
+                    "100%": {
+                        transform: "translate(0px, 0px) scale(1)",
+                    },
+                },
+            },
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      
+      .flip-card { perspective: 1000px; }
+      .flip-card-inner { transition: transform 0.6s; transform-style: preserve-3d; }
+      .flip-card-front, .flip-card-back { backface-visibility: hidden; }
+      .flip-card-back { transform: rotateY(180deg); }
+      .flipped .flip-card-inner { transform: rotateY(180deg); }
+
+      /* Wiki Content Styling */
+      .wiki-content .thumb {
+          border: 1px solid #e2e8f0;
+          background-color: #f8fafc;
+          padding: 8px;
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+          max-width: 100%;
+          display: table;
+      }
+      .wiki-content .tright { float: right; clear: right; margin-left: 1.5rem; }
+      .wiki-content .tleft { float: left; clear: left; margin-right: 1.5rem; }
+      .wiki-content .thumbcaption { font-size: 0.85rem; color: #64748b; margin-top: 6px; line-height: 1.4; display: table-caption; caption-side: bottom; }
+      .wiki-content .thumbinner { width: auto !important; max-width: 100%; }
+      .wiki-content img { height: auto; max-width: 100%; border-radius: 4px; }
+      
+      @media (max-width: 768px) {
+          .wiki-content .tright, .wiki-content .tleft { float: none; margin: 1rem auto; width: 100%; display: block; }
+          .wiki-content .thumb { display: block; width: 100%; }
+      }
+
+      /* --- THEMES --- */
+
+      /* Dark Mode Overrides */
+      body.theme-dark { background-color: #0f172a; color: #f1f5f9; }
+      body.theme-dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
+      body.theme-dark .bg-slate-50 { background-color: #0f172a !important; }
+      body.theme-dark .text-slate-900, body.theme-dark .text-slate-800, body.theme-dark .text-slate-700 { color: #f1f5f9 !important; }
+      body.theme-dark .text-slate-600, body.theme-dark .text-slate-500 { color: #94a3b8 !important; }
+      body.theme-dark .border-slate-100, body.theme-dark .border-slate-200 { border-color: #334155 !important; }
+      body.theme-dark .wiki-content { color: #cbd5e1 !important; }
+      body.theme-dark input, body.theme-dark textarea, body.theme-dark select { background-color: #334155; color: white; border-color: #475569; }
+      body.theme-dark .prose { color: #cbd5e1 !important; }
+      body.theme-dark .prose h1, body.theme-dark .prose h2, body.theme-dark .prose h3, body.theme-dark .prose strong { color: #f1f5f9 !important; }
+
+      /* Sepia Mode Overrides */
+      body.theme-sepia { background-color: #f4ecd8; color: #433422; }
+      body.theme-sepia .bg-white { background-color: #fdf6e3 !important; border-color: #e6dbb9 !important; }
+      body.theme-sepia .bg-slate-50 { background-color: #eee8d5 !important; }
+      body.theme-sepia .text-slate-900, body.theme-sepia .text-slate-800, body.theme-sepia .text-slate-700 { color: #433422 !important; }
+      body.theme-sepia .text-slate-600, body.theme-sepia .text-slate-500 { color: #5c4b37 !important; }
+      body.theme-sepia .border-slate-100, body.theme-sepia .border-slate-200 { border-color: #d3cbb1 !important; }
+      body.theme-sepia input, body.theme-sepia textarea, body.theme-sepia select { background-color: #eee8d5; color: #433422; border-color: #d3cbb1; }
+
+      /* High Contrast Overrides */
+      body.theme-contrast { background-color: #000000; color: #ffff00; }
+      body.theme-contrast .bg-white, body.theme-contrast .bg-slate-50 { background-color: #000000 !important; border: 2px solid #ffff00 !important; }
+      body.theme-contrast .text-slate-900, body.theme-contrast .text-slate-800, body.theme-contrast .text-slate-700, body.theme-contrast .text-slate-600, body.theme-contrast .text-slate-500 { color: #ffff00 !important; }
+      body.theme-contrast .bg-brand-50, body.theme-contrast .bg-brand-600, body.theme-contrast .bg-indigo-50 { background-color: #ffff00 !important; color: #000000 !important; }
+      body.theme-contrast .text-brand-600, body.theme-contrast .text-brand-700 { color: #ffff00 !important; text-decoration: underline; }
+      body.theme-contrast input, body.theme-contrast textarea, body.theme-contrast select { background-color: #000000; color: #ffff00; border: 2px solid #ffff00; }
+
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-50 text-slate-900 antialiased transition-colors duration-300">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
