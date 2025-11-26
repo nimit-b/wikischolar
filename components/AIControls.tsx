@@ -21,14 +21,24 @@ const AIControls: React.FC<AIControlsProps> = ({
 }) => {
   const [customPrompt, setCustomPrompt] = useState('');
 
-  const isImageOrSvg = simpleExplanation && (simpleExplanation.trim().startsWith('<svg') || simpleExplanation.startsWith('data:image') || simpleExplanation.startsWith('http'));
+  const isImageOrSvg = simpleExplanation && (simpleExplanation.trim().startsWith('<svg') || simpleExplanation.startsWith('data:') || simpleExplanation.startsWith('http'));
+
+  const sanitizeDataUri = (content: string) => {
+      // Fix incompatible MIME types from some AI generators
+      if (content.startsWith('data:text/xml;base64')) {
+          return content.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      }
+      return content;
+  };
 
   const downloadImage = () => {
       if (!simpleExplanation) return;
       
-      if (simpleExplanation.startsWith('data:image') || simpleExplanation.startsWith('http')) {
+      const sanitized = sanitizeDataUri(simpleExplanation);
+
+      if (sanitized.startsWith('data:image') || sanitized.startsWith('http')) {
           const a = document.createElement('a');
-          a.href = simpleExplanation;
+          a.href = sanitized;
           a.download = `ai-visual-${Date.now()}.png`;
           document.body.appendChild(a);
           a.click();
@@ -91,6 +101,32 @@ const AIControls: React.FC<AIControlsProps> = ({
         }
     });
     if (inList) html += '</ul>';
+    
+    // Quick table support for AI Assistant tab
+    const tableRegex = /((?:\|.*\|\r?\n)+)/g;
+    html = html.replace(tableRegex, (match) => {
+        const rows = match.trim().split('\n');
+        if (rows.length < 2) return match; 
+        const separatorRegex = /^\|?\s*:?-+:?\s*(\|?\s*:?-+:?\s*)+\|?$/;
+        if (!separatorRegex.test(rows[1].trim())) return match;
+        
+        let tableHtml = '<div class="overflow-x-auto my-6"><table class="min-w-full border-collapse border border-slate-200 rounded-lg shadow-sm text-sm text-left">';
+        const headers = rows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+        tableHtml += '<thead class="bg-slate-50"><tr>';
+        headers.forEach(h => { tableHtml += `<th class="border border-slate-200 px-4 py-2 font-semibold text-slate-700">${h}</th>`; });
+        tableHtml += '</tr></thead><tbody>';
+        for (let i = 2; i < rows.length; i++) {
+            const cells = rows[i].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+            if (cells.length > 0) {
+                 tableHtml += `<tr class="${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">`;
+                 cells.forEach(c => { tableHtml += `<td class="border border-slate-200 px-4 py-2 text-slate-600">${c}</td>`; });
+                 tableHtml += '</tr>';
+            }
+        }
+        tableHtml += '</tbody></table></div>';
+        return tableHtml;
+    });
+
     return html;
   };
 
@@ -212,8 +248,21 @@ const AIControls: React.FC<AIControlsProps> = ({
            <div className="p-8 prose prose-slate max-w-none">
               {isImageOrSvg ? (
                   <div className="w-full overflow-hidden flex flex-col items-center bg-white p-4 rounded-lg border border-slate-100 shadow-inner group/diagram relative">
-                      {(simpleExplanation.startsWith('data:image') || simpleExplanation.startsWith('http')) ? (
-                           <img src={simpleExplanation} alt="AI Visual" className="w-full h-auto rounded-lg" />
+                      {(simpleExplanation.startsWith('data:') || simpleExplanation.startsWith('http')) ? (
+                           <img 
+                                src={sanitizeDataUri(simpleExplanation)} 
+                                alt="AI Visual" 
+                                className="w-full h-auto rounded-lg" 
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const obj = document.createElement('object');
+                                    obj.data = sanitizeDataUri(simpleExplanation);
+                                    obj.type = "image/svg+xml";
+                                    obj.className = "w-full h-auto rounded-lg";
+                                    target.parentNode?.appendChild(obj);
+                                }}
+                            />
                       ) : (
                           <div 
                             className="w-full [&_svg]:w-full [&_svg]:h-auto"

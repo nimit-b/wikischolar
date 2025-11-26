@@ -92,11 +92,21 @@ const ContentSection: React.FC<ContentSectionProps> = ({
       }
   };
 
+  const sanitizeDataUri = (content: string) => {
+      // Fix incompatible MIME types from some AI generators
+      if (content.startsWith('data:text/xml;base64')) {
+          return content.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      }
+      return content;
+  };
+
   const downloadImage = (content: string, fileName: string) => {
+      const sanitized = sanitizeDataUri(content);
+
       // Check if it's base64/url
-      if (content.startsWith('data:image') || content.startsWith('http')) {
+      if (sanitized.startsWith('data:image') || sanitized.startsWith('http')) {
           const a = document.createElement('a');
-          a.href = content;
+          a.href = sanitized;
           a.download = `${fileName}.png`;
           document.body.appendChild(a);
           a.click();
@@ -125,7 +135,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
   const validSections = topic.sections.filter(s => s.title || s.contentHtml.length > 20);
 
   const cleanSvgContent = (content: string) => {
-      if (content.startsWith('data:image') || content.startsWith('http')) return content; // Pass through images
+      if (content.startsWith('data:') || content.startsWith('http')) return content; // Pass through images
       const match = content.match(/<svg[\s\S]*?<\/svg>/i);
       let svg = match ? match[0] : content;
       svg = svg.replace(/width="[^"]*"/gi, '').replace(/height="[^"]*"/gi, '');
@@ -269,7 +279,7 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                             
                             <div className="wiki-content prose prose-slate prose-lg max-w-none prose-headings:font-serif prose-headings:text-slate-800 prose-p:text-slate-600 prose-p:leading-relaxed prose-a:text-brand-600 prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-img:shadow-md" 
                                 dangerouslySetInnerHTML={{ 
-                                    __html: (section.contentHtml.includes('<ul>') || section.contentHtml.includes('<p>')) 
+                                    __html: (section.contentHtml.includes('<ul>') || section.contentHtml.includes('<p>') || section.contentHtml.includes('<div')) 
                                         ? section.contentHtml 
                                         : parseMarkdownToHtml(section.contentHtml) 
                                 }} 
@@ -296,8 +306,22 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                                     {extras[section.id].type === 'diagram' ? (
                                         <div className="w-full overflow-hidden flex flex-col items-center bg-white p-4 rounded-lg border border-indigo-100 shadow-sm relative group/diagram">
                                             {/* Render Image OR SVG */}
-                                            {(extras[section.id].content.startsWith('data:image') || extras[section.id].content.startsWith('http')) ? (
-                                                <img src={extras[section.id].content} alt="AI Generated Diagram" className="w-full h-auto rounded-lg" />
+                                            {(extras[section.id].content.startsWith('data:') || extras[section.id].content.startsWith('http')) ? (
+                                                <img 
+                                                    src={sanitizeDataUri(extras[section.id].content)} 
+                                                    alt="AI Generated Diagram" 
+                                                    className="w-full h-auto rounded-lg"
+                                                    onError={(e) => {
+                                                        // Fallback for weird SVG data uris that img tags hate
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                        const obj = document.createElement('object');
+                                                        obj.data = sanitizeDataUri(extras[section.id].content);
+                                                        obj.type = "image/svg+xml";
+                                                        obj.className = "w-full h-auto rounded-lg";
+                                                        target.parentNode?.appendChild(obj);
+                                                    }}
+                                                />
                                             ) : (
                                                 <div 
                                                     className="w-full [&_svg]:w-full [&_svg]:h-auto" 

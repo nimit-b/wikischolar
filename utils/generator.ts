@@ -52,16 +52,46 @@ export const parseMarkdownToHtml = (text: string): string => {
     html = html.replace(/^###\s+(.*)$/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>');
     html = html.replace(/^##\s+(.*)$/gm, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>');
 
-    // 6. Handle Tables (Basic support)
-    if (html.includes('|')) {
-        const rows = html.match(/\|.*\|/g);
-        if (rows && rows.length > 1) {
-             // This is a very basic table parser for markdown tables
-             // It won't handle complex cases but works for standard AI output
-             // We rely on the fact that usually tables are block elements.
-             // For better support, a real library is needed, but we keep it light here.
+    // 6. Handle Tables (Robust Regex Parser)
+    // Looks for lines starting with | and containing |, allowing for multiline tables
+    const tableRegex = /((?:\|.*\|\r?\n)+)/g;
+    
+    html = html.replace(tableRegex, (match) => {
+        const rows = match.trim().split('\n');
+        if (rows.length < 2) return match; // Not a valid table
+
+        // Check if second row is a separator |---|
+        const separatorRegex = /^\|?\s*:?-+:?\s*(\|?\s*:?-+:?\s*)+\|?$/;
+        if (!separatorRegex.test(rows[1].trim())) return match;
+
+        let tableHtml = '<div class="overflow-x-auto my-6"><table class="min-w-full border-collapse border border-slate-200 rounded-lg shadow-sm text-sm text-left">';
+        
+        // Header
+        const headers = rows[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+        tableHtml += '<thead class="bg-slate-50"><tr>';
+        headers.forEach(h => {
+             tableHtml += `<th class="border border-slate-200 px-4 py-2 font-semibold text-slate-700">${h}</th>`;
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        // Body
+        for (let i = 2; i < rows.length; i++) {
+            const cells = rows[i].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+            // Only add if row has content
+            if (cells.length > 0) {
+                 tableHtml += `<tr class="${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">`;
+                 cells.forEach(c => {
+                     // Simple formatting inside cells
+                     let cellContent = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                     tableHtml += `<td class="border border-slate-200 px-4 py-2 text-slate-600">${cellContent}</td>`;
+                 });
+                 tableHtml += '</tr>';
+            }
         }
-    }
+        
+        tableHtml += '</tbody></table></div>';
+        return tableHtml;
+    });
 
     // 7. Handle Paragraphs (double newlines)
     // If it's not already wrapped in a tag, wrap double newlines in <p>
@@ -69,7 +99,9 @@ export const parseMarkdownToHtml = (text: string): string => {
     html = segments.map(seg => {
         const trimmed = seg.trim();
         if (!trimmed) return '';
-        if (trimmed.startsWith('<') && !trimmed.startsWith('<strong') && !trimmed.startsWith('<em') && !trimmed.startsWith('<a')) return seg;
+        // Avoid wrapping existing block elements
+        if (trimmed.startsWith('<div') || trimmed.startsWith('<table') || trimmed.startsWith('<ul') || trimmed.startsWith('<h')) return seg;
+        
         return `<p class="mb-4 leading-relaxed">${seg}</p>`;
     }).join('');
 
