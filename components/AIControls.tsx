@@ -27,14 +27,17 @@ const AIControls: React.FC<AIControlsProps> = ({
       if (!content) return '';
       let result = content.trim();
 
-      // Fix incompatible MIME types
-      if (result.startsWith('data:text/xml;base64')) {
-          result = result.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
-      } else if (result.startsWith('data:text/plain;base64') && result.includes('iVBOR')) {
-          result = result.replace('data:text/plain;base64', 'data:image/png;base64');
+      // Magic Byte Detection for Base64
+      const base64Index = result.indexOf(';base64,');
+      if (base64Index !== -1) {
+          const rawBase64 = result.substring(base64Index + 8).trim();
+          if (rawBase64.startsWith('iVBOR')) return `data:image/png;base64,${rawBase64}`;
+          if (rawBase64.startsWith('/9j/')) return `data:image/jpeg;base64,${rawBase64}`;
+          if (rawBase64.startsWith('R0lGOD')) return `data:image/gif;base64,${rawBase64}`;
+          if (rawBase64.startsWith('PHN2Zy') || rawBase64.startsWith('PD94bW')) return `data:image/svg+xml;base64,${rawBase64}`;
       }
 
-      // Fix Unencoded SVG Data URIs
+      // Legacy fallback for unencoded SVG data
       if (result.startsWith('data:image/svg+xml') && !result.includes(';base64')) {
           if (result.includes('<')) {
               const body = result.substring(result.indexOf(',') + 1);
@@ -50,9 +53,10 @@ const AIControls: React.FC<AIControlsProps> = ({
       const sanitized = sanitizeDataUri(simpleExplanation);
 
       if (sanitized.startsWith('data:image') || sanitized.startsWith('http')) {
+          const extension = sanitized.includes('image/png') ? 'png' : sanitized.includes('image/jpeg') ? 'jpg' : 'svg';
           const a = document.createElement('a');
           a.href = sanitized;
-          a.download = `ai-visual-${Date.now()}.png`;
+          a.download = `ai-visual-${Date.now()}.${extension}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

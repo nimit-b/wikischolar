@@ -96,15 +96,30 @@ const ContentSection: React.FC<ContentSectionProps> = ({
       if (!content) return '';
       let result = content.trim();
 
-      // Fix incompatible MIME types from some AI generators
-      if (result.startsWith('data:text/xml;base64')) {
-          result = result.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
-      } else if (result.startsWith('data:text/plain;base64') && result.includes('iVBOR')) {
-          result = result.replace('data:text/plain;base64', 'data:image/png;base64');
+      // Magic Byte Detection: Check the actual Base64 signature
+      const base64Index = result.indexOf(';base64,');
+      if (base64Index !== -1) {
+          const rawBase64 = result.substring(base64Index + 8).trim();
+          
+          // PNG signature (iVBORw0KGgo)
+          if (rawBase64.startsWith('iVBOR')) {
+              return `data:image/png;base64,${rawBase64}`;
+          } 
+          // JPG signature (/9j/)
+          else if (rawBase64.startsWith('/9j/')) {
+              return `data:image/jpeg;base64,${rawBase64}`;
+          }
+          // GIF signature (R0lGOD)
+          else if (rawBase64.startsWith('R0lGOD')) {
+               return `data:image/gif;base64,${rawBase64}`;
+          }
+          // SVG signature (PHN2Zy = <svg, PD94bW = <?xml)
+          else if (rawBase64.startsWith('PHN2Zy') || rawBase64.startsWith('PD94bW')) {
+               return `data:image/svg+xml;base64,${rawBase64}`;
+          }
       }
 
-      // Fix Unencoded SVG Data URIs (The "Encoding Error" fix)
-      // If starts with data:image/svg+xml, DOES NOT have ;base64, and contains <
+      // Legacy fallback: If starts with data:image/svg+xml, DOES NOT have ;base64, and contains <
       if (result.startsWith('data:image/svg+xml') && !result.includes(';base64')) {
           // Check if it's raw XML. If so, encode it.
           if (result.includes('<')) {
@@ -121,16 +136,17 @@ const ContentSection: React.FC<ContentSectionProps> = ({
 
       // Check if it's base64/url
       if (sanitized.startsWith('data:image') || sanitized.startsWith('http')) {
+          const extension = sanitized.includes('image/png') ? 'png' : sanitized.includes('image/jpeg') ? 'jpg' : 'svg';
           const a = document.createElement('a');
           a.href = sanitized;
-          a.download = `${fileName}.png`;
+          a.download = `${fileName}.${extension}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           return;
       }
       
-      // Fallback for SVG text
+      // Fallback for raw SVG text
       const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -329,8 +345,8 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                                                     className="w-full h-auto rounded-lg"
                                                     onError={(e) => {
                                                         const target = e.target as HTMLImageElement;
-                                                        // Only fallback to object if it's likely an SVG data URI that failed
-                                                        if (extras[section.id].content.startsWith('data:image/svg')) {
+                                                        // Fallback logic for actual SVG data
+                                                        if (extras[section.id].content.includes('svg')) {
                                                             target.style.display = 'none';
                                                             const obj = document.createElement('object');
                                                             obj.data = sanitizeDataUri(extras[section.id].content);
@@ -338,7 +354,6 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                                                             obj.className = "w-full h-auto rounded-lg";
                                                             target.parentNode?.appendChild(obj);
                                                         }
-                                                        // For HTTP URLs, we let the broken image show or handle differently, but don't try to parse as XML
                                                     }}
                                                 />
                                             ) : (
