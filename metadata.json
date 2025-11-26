@@ -1,0 +1,5 @@
+{
+  "name": "WikiScholar",
+  "description": "An intelligent study companion that generates study guides, flashcards, and quizzes directly from Wikipedia topics.",
+  "requestFramePermissions": []
+}
