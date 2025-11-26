@@ -93,11 +93,27 @@ const ContentSection: React.FC<ContentSectionProps> = ({
   };
 
   const sanitizeDataUri = (content: string) => {
+      if (!content) return '';
+      let result = content.trim();
+
       // Fix incompatible MIME types from some AI generators
-      if (content.startsWith('data:text/xml;base64')) {
-          return content.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      if (result.startsWith('data:text/xml;base64')) {
+          result = result.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      } else if (result.startsWith('data:text/plain;base64') && result.includes('iVBOR')) {
+          result = result.replace('data:text/plain;base64', 'data:image/png;base64');
       }
-      return content;
+
+      // Fix Unencoded SVG Data URIs (The "Encoding Error" fix)
+      // If starts with data:image/svg+xml, DOES NOT have ;base64, and contains <
+      if (result.startsWith('data:image/svg+xml') && !result.includes(';base64')) {
+          // Check if it's raw XML. If so, encode it.
+          if (result.includes('<')) {
+              const body = result.substring(result.indexOf(',') + 1);
+              return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(body)}`;
+          }
+      }
+
+      return result;
   };
 
   const downloadImage = (content: string, fileName: string) => {
@@ -312,7 +328,6 @@ const ContentSection: React.FC<ContentSectionProps> = ({
                                                     alt="AI Generated Diagram" 
                                                     className="w-full h-auto rounded-lg"
                                                     onError={(e) => {
-                                                        // Fallback for weird SVG data uris that img tags hate
                                                         const target = e.target as HTMLImageElement;
                                                         target.style.display = 'none';
                                                         const obj = document.createElement('object');

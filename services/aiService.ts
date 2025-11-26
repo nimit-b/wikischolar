@@ -251,8 +251,13 @@ export const generateWithAI = async (
 
     if (['simplify', 'custom', 'expand', 'real_world'].includes(type)) return content.trim(); 
     
-    // JSON Extraction
-    content = content.replace(/```json/gi, '').replace(/```/g, '').replace(/\[\/s\]/g, '').replace(/[\x00-\x1F\x7F]/g, "").trim();
+    // JSON Extraction Cleanup
+    // Remove markdown code blocks and conversational filler
+    // CRITICAL FIX: The regex [\x00-\x1F\x7F] removes newlines (\x0A) and tabs (\x09).
+    // We must preserve \n (0A), \r (0D), and \t (09) for proper Markdown table formatting and JSON readability.
+    // Exclude: 0-8, 11-12, 14-31, 127
+    content = content.replace(/```json/gi, '').replace(/```/g, '').replace(/\[\/s\]/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
+    
     let jsonString = content;
     const openSquare = jsonString.indexOf('[');
     const openCurly = jsonString.indexOf('{');

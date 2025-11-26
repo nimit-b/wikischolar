@@ -24,11 +24,24 @@ const AIControls: React.FC<AIControlsProps> = ({
   const isImageOrSvg = simpleExplanation && (simpleExplanation.trim().startsWith('<svg') || simpleExplanation.startsWith('data:') || simpleExplanation.startsWith('http'));
 
   const sanitizeDataUri = (content: string) => {
-      // Fix incompatible MIME types from some AI generators
-      if (content.startsWith('data:text/xml;base64')) {
-          return content.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      if (!content) return '';
+      let result = content.trim();
+
+      // Fix incompatible MIME types
+      if (result.startsWith('data:text/xml;base64')) {
+          result = result.replace('data:text/xml;base64', 'data:image/svg+xml;base64');
+      } else if (result.startsWith('data:text/plain;base64') && result.includes('iVBOR')) {
+          result = result.replace('data:text/plain;base64', 'data:image/png;base64');
       }
-      return content;
+
+      // Fix Unencoded SVG Data URIs
+      if (result.startsWith('data:image/svg+xml') && !result.includes(';base64')) {
+          if (result.includes('<')) {
+              const body = result.substring(result.indexOf(',') + 1);
+              return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(body)}`;
+          }
+      }
+      return result;
   };
 
   const downloadImage = () => {
